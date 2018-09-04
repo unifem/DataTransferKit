@@ -16,4 +16,4 @@ before_script:
   - docker pull $BASE
 
 script:
-  - docker build --file docker/Dockerfile
+  - docker build --file docker/Dockerfile .
