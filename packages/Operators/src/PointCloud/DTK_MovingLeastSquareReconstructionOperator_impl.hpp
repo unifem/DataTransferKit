@@ -56,6 +56,8 @@
 
 #include <Tpetra_MultiVector.hpp>
 
+#include <iostream>
+
 namespace DataTransferKit
 {
 //---------------------------------------------------------------------------//
@@ -205,6 +207,7 @@ void MovingLeastSquareReconstructionOperator<Basis, DIM>::setupImpl(
     // Build the interpolation matrix.
     Teuchos::ArrayRCP<SupportId> children_per_parent =
         pairings.childrenPerParent();
+    // SupportId is unsigned long
     SupportId max_entries_per_row = *std::max_element(
         children_per_parent.begin(), children_per_parent.end() );
     d_coupling_matrix = Teuchos::rcp( new Tpetra::CrsMatrix<Scalar, LO, GO>(
@@ -241,6 +244,15 @@ void MovingLeastSquareReconstructionOperator<Basis, DIM>::setupImpl(
             }
             d_coupling_matrix->insertGlobalValues( target_support_ids[i],
                                                    indices( 0, nn ), values );
+
+            // add printing for testing
+            std::cout << comm->getRank() << ':'
+                      << "targetID:" << target_support_ids[i] << '[';
+            for ( int j = 0; j < nn; ++j )
+            {
+                std::cout << indices( 0, nn )[j] << ',';
+            }
+            std::cout << "]\n";
         }
     }
     d_coupling_matrix->fillComplete( domain_map, range_map );
