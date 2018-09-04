@@ -2,7 +2,7 @@ Data Transfer Kit (DTK) Version 2.0
 ===================================
 
 [![Stories in Ready](https://badge.waffle.io/ORNL-CEES/DataTransferKit.svg?label=ready&title=Ready)](http://waffle.io/ORNL-CEES/DataTransferKit)
-[![Build Status](https://jupyterdocker.ornl.gov:8080/job/DataTransferKit-continuous/badge/icon)](https://jupyterdocker.ornl.gov:8080/job/DataTransferKit-continuous/)
+[![Build Status](https://travis-ci.org/chiao45/DataTransferKit.svg?branch=dev-qc)](https://travis-ci.org/chiao45/DataTransferKit)
 [![Documentation Status](http://readthedocs.org/projects/datatransferkit/badge/?version=latest)](http://datatransferkit.readthedocs.io/en/latest/?badge=latest)
 
 
