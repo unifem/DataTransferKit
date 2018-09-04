@@ -3,6 +3,10 @@ dist: trusty
 language: python
 services: docker
 
+branches:
+  only:
+  - dev-qc
+
 env:
   global:
     - BASE=unifem/cht-coupler:meshdb-bin
