@@ -54,6 +54,11 @@
 #include <Teuchos_SerialDenseSolver.hpp>
 #include <Teuchos_SerialDenseVector.hpp>
 
+// added, QC
+// expand the locally adaptive radius by the following percentage
+#define EXPANDED_PERCENTAGE 0.3
+// added, QC
+
 namespace DataTransferKit
 {
 //---------------------------------------------------------------------------//
@@ -65,7 +70,7 @@ LocalMLSProblem<Basis, DIM>::LocalMLSProblem(
     const Teuchos::ArrayView<const double> &target_center,
     const Teuchos::ArrayView<const unsigned> &source_lids,
     const Teuchos::ArrayView<const double> &source_centers, const Basis &basis,
-    const double radius )
+    const double radius_ )
     : d_shape_function( source_lids.size() )
 {
     DTK_REQUIRE( 0 == source_centers.size() % DIM );
@@ -73,6 +78,32 @@ LocalMLSProblem<Basis, DIM>::LocalMLSProblem(
 
     // Number of source centers supporting this target center.
     int num_sources = source_lids.size();
+
+    // get the preferred row size
+    // added QC
+    // for each dimension, a preferred choice of row size is 1.5*column
+    // DTK2 only uses quadratic polynomial basis thus having the following table
+    const static int PREFERRED_ROWS[3] = {5, 10, 15};
+    if ( num_sources > PREFERRED_ROWS[DIM - 1] )
+    {
+        num_sources = PREFERRED_ROWS[DIM - 1];
+    }
+    d_shape_function.resize( num_sources );
+    // use adaptive radius
+    double radius = radius_; // remove unused warning
+    // since the source centers are sorted, getting the radius of the local
+    // support region is trivial
+    {
+        // implement in the local scope by copying the following code
+        Teuchos::ArrayView<const double> source_center_view;
+        source_center_view =
+            source_centers( DIM * source_lids[num_sources - 1], DIM );
+        radius = EuclideanDistance<DIM>::distance(
+            target_center.getRawPtr(), source_center_view.getRawPtr() );
+        radius *= ( 1.0 + EXPANDED_PERCENTAGE ); // expand the radius
+    }
+    // added QC
+
     int poly_size = 0;
     Teuchos::SerialDenseMatrix<int, double> P;
     Teuchos::SerialDenseVector<int, double> target_poly;
