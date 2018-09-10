@@ -52,17 +52,22 @@ namespace DataTransferKit
 /*!
  * \brief Constructor.
  */
+// added the leaf parameter, QC
 template <int DIM>
 SplineInterpolationPairing<DIM>::SplineInterpolationPairing(
     const Teuchos::ArrayView<const double> &child_centers,
     const Teuchos::ArrayView<const double> &parent_centers, const bool use_knn,
-    const unsigned num_neighbors, const double radius )
+    const unsigned num_neighbors, const double radius, const int leaf )
 {
     DTK_REQUIRE( 0 == child_centers.size() % DIM );
     DTK_REQUIRE( 0 == parent_centers.size() % DIM );
 
     // Setup the kD-tree
     unsigned leaf_size = 30;
+    if ( leaf > 0 )
+    {
+        leaf_size = (unsigned)leaf;
+    }
     NanoflannTree<DIM> tree( child_centers, leaf_size );
 
     // Allocate arrays

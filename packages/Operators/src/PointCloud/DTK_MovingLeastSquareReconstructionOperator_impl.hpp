@@ -56,8 +56,6 @@
 
 #include <Tpetra_MultiVector.hpp>
 
-#include <iostream>
-
 namespace DataTransferKit
 {
 //---------------------------------------------------------------------------//
@@ -74,6 +72,7 @@ MovingLeastSquareReconstructionOperator<Basis, DIM>::
     , d_radius( 0.0 )
     , d_domain_entity_dim( 0 )
     , d_range_entity_dim( 0 )
+    , d_leaf( 0 )
 {
     // Determine if we are doing kNN search or radius search.
     if ( parameters.isParameter( "Type of Search" ) )
@@ -117,6 +116,10 @@ MovingLeastSquareReconstructionOperator<Basis, DIM>::
     if ( parameters.isParameter( "Range Entity Dimension" ) )
     {
         d_range_entity_dim = parameters.get<int>( "Range Entity Dimension" );
+    }
+    if ( parameters.isParameter( "Leaf Size" ) )
+    {
+        d_leaf = parameters.get<int>( "Leaf Size" );
     }
 }
 
@@ -198,8 +201,9 @@ void MovingLeastSquareReconstructionOperator<Basis, DIM>::setupImpl(
                             dist_source_support_ids() );
 
     // Build the source/target pairings.
-    SplineInterpolationPairing<DIM> pairings( dist_sources, target_centers(),
-                                              d_use_knn, d_knn, d_radius );
+    // added the leaf parameter, QC
+    SplineInterpolationPairing<DIM> pairings(
+        dist_sources, target_centers(), d_use_knn, d_knn, d_radius, d_leaf );
 
     // Build the basis.
     Teuchos::RCP<Basis> basis = BP::create();
@@ -244,15 +248,6 @@ void MovingLeastSquareReconstructionOperator<Basis, DIM>::setupImpl(
             }
             d_coupling_matrix->insertGlobalValues( target_support_ids[i],
                                                    indices( 0, nn ), values );
-
-            // add printing for testing
-            std::cout << comm->getRank() << ':'
-                      << "targetID:" << target_support_ids[i] << '[';
-            for ( int j = 0; j < nn; ++j )
-            {
-                std::cout << indices( 0, nn )[j] << ',';
-            }
-            std::cout << "]\n";
         }
     }
     d_coupling_matrix->fillComplete( domain_map, range_map );

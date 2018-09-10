@@ -145,6 +145,10 @@ class MovingLeastSquareReconstructionOperator : virtual public MapOperator
     // Range entity topological dimension. Default is 0 (vertex).
     int d_range_entity_dim;
 
+    // leaf size for the kdtree
+    // added by QC
+    int d_leaf;
+
     // Coupling matrix.
     Teuchos::RCP<Tpetra::CrsMatrix<Scalar, LO, GO>> d_coupling_matrix;
 };
