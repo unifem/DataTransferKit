@@ -56,7 +56,7 @@
 
 // added, QC
 // expand the locally adaptive radius by the following percentage
-#define EXPANDED_PERCENTAGE 0.3
+#define EXPANDED_PERCENTAGE 0.2
 // added, QC
 
 namespace DataTransferKit
@@ -83,7 +83,9 @@ LocalMLSProblem<Basis, DIM>::LocalMLSProblem(
     // added QC
     // for each dimension, a preferred choice of row size is 1.5*column
     // DTK2 only uses quadratic polynomial basis thus having the following table
-    const static int PREFERRED_ROWS[3] = {5, 10, 15};
+    // However, for solution transfer problem, we have observed that a larger
+    // neighborhood can super-converge. Therefore, we choose 3*column
+    const static int PREFERRED_ROWS[3] = {9, 18, 30};
     if ( num_sources > PREFERRED_ROWS[DIM - 1] )
     {
         num_sources = PREFERRED_ROWS[DIM - 1];
