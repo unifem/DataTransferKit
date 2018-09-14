@@ -66,13 +66,20 @@ class LocalMLSProblem
     //@}
 
     // Default constructor.
-    LocalMLSProblem() { /* ... */}
+    LocalMLSProblem()
+    { /* ... */
+    }
 
     // Constructor.
+    // added, QC
+    // use_new_impl, default is false so that everywhere that calls this
+    // method still preserving the original behavior
+    // added, QC
     LocalMLSProblem( const Teuchos::ArrayView<const double> &target_center,
                      const Teuchos::ArrayView<const unsigned> &source_lids,
                      const Teuchos::ArrayView<const double> &source_centers,
-                     const Basis &basis, const double radius );
+                     const Basis &basis, const double radius,
+                     bool use_new_impl = false );
 
     // Get a view of the local shape function.
     Teuchos::ArrayView<const double> shapeFunction() const
