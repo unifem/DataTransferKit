@@ -149,6 +149,10 @@ class MovingLeastSquareReconstructionOperator : virtual public MapOperator
     // added by QC
     int d_leaf;
 
+    // use qrcp impl
+    // added by QC
+    bool d_use_qrcp;
+
     // Coupling matrix.
     Teuchos::RCP<Tpetra::CrsMatrix<Scalar, LO, GO>> d_coupling_matrix;
 };

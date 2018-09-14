@@ -73,6 +73,7 @@ MovingLeastSquareReconstructionOperator<Basis, DIM>::
     , d_domain_entity_dim( 0 )
     , d_range_entity_dim( 0 )
     , d_leaf( 0 )
+    , d_use_qrcp( false )
 {
     // Determine if we are doing kNN search or radius search.
     if ( parameters.isParameter( "Type of Search" ) )
@@ -117,10 +118,16 @@ MovingLeastSquareReconstructionOperator<Basis, DIM>::
     {
         d_range_entity_dim = parameters.get<int>( "Range Entity Dimension" );
     }
+    // added, QC
     if ( parameters.isParameter( "Leaf Size" ) )
     {
         d_leaf = parameters.get<int>( "Leaf Size" );
     }
+    if ( parameters.isParameter( "Use QRCP Impl" ) )
+    {
+        d_use_qrcp = parameters.get<bool>( "Use QRCP Impl" );
+    }
+    // added, QC
 }
 
 //---------------------------------------------------------------------------//
@@ -234,7 +241,7 @@ void MovingLeastSquareReconstructionOperator<Basis, DIM>::setupImpl(
             // Build the local interpolation problem.
             LocalMLSProblem<Basis, DIM> local_problem(
                 target_view, pairings.childCenterIds( i ), dist_sources, *basis,
-                pairings.parentSupportRadius( i ) );
+                pairings.parentSupportRadius( i ), d_use_qrcp );
 
             // Get MLS shape function values for this target point.
             values = local_problem.shapeFunction();
