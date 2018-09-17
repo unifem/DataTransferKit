@@ -53,6 +53,16 @@
 
 namespace DataTransferKit
 {
+
+// added, QC
+// forward pairing
+template <int DIM>
+class SplineInterpolationPairing;
+// forward distributor
+template <int DIM>
+class CenterDistributor;
+// added, QC
+
 //---------------------------------------------------------------------------//
 /*!
  * \class MovingLeastSquareReconstructionOperator
@@ -152,6 +162,14 @@ class MovingLeastSquareReconstructionOperator : virtual public MapOperator
     // use qrcp impl
     // added by QC
     bool d_use_qrcp;
+
+    // store the pairing
+    // added by QC
+    Teuchos::RCP<SplineInterpolationPairing<DIM>> d_pairings;
+
+    // store the distributor
+    // added by QC
+    Teuchos::RCP<CenterDistributor<DIM>> d_dist;
 
     // Coupling matrix.
     Teuchos::RCP<Tpetra::CrsMatrix<Scalar, LO, GO>> d_coupling_matrix;

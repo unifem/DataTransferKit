@@ -195,9 +195,14 @@ void MovingLeastSquareReconstructionOperator<Basis, DIM>::setupImpl(
     // Gather the source centers that are in the proximity of the target
     // centers on this proc.
     Teuchos::Array<double> dist_sources;
-    CenterDistributor<DIM> distributor( comm, source_centers(),
-                                        target_centers(), target_proximity,
-                                        dist_sources );
+    // added by QC
+    d_dist = Teuchos::rcp(
+        new CenterDistributor<DIM>( comm, source_centers(), target_centers(),
+                                    target_proximity, dist_sources ) );
+    CenterDistributor<DIM> &distributor = *d_dist;
+    // CenterDistributor<DIM> distributor( comm, source_centers(),
+    //                                     target_centers(), target_proximity,
+    //                                     dist_sources );
 
     // Gather the global ids of the source centers that are within the proximity
     // of
@@ -209,8 +214,11 @@ void MovingLeastSquareReconstructionOperator<Basis, DIM>::setupImpl(
 
     // Build the source/target pairings.
     // added the leaf parameter, QC
-    SplineInterpolationPairing<DIM> pairings(
-        dist_sources, target_centers(), d_use_knn, d_knn, d_radius, d_leaf );
+    d_pairings = Teuchos::rcp( new SplineInterpolationPairing<DIM>(
+        dist_sources, target_centers(), d_use_knn, d_knn, d_radius, d_leaf ) );
+    SplineInterpolationPairing<DIM> &pairings = *d_pairings;
+    // SplineInterpolationPairing<DIM> pairings(
+    //     dist_sources, target_centers(), d_use_knn, d_knn, d_radius, d_leaf );
 
     // Build the basis.
     Teuchos::RCP<Basis> basis = BP::create();
