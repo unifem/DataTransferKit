@@ -49,6 +49,8 @@
 #include <Teuchos_Comm.hpp>
 #include <Teuchos_RCP.hpp>
 
+#include <Teuchos_SerialDenseMatrix.hpp> // added, QC
+
 #include <Tpetra_CrsMatrix.hpp>
 
 namespace DataTransferKit
@@ -131,6 +133,38 @@ class MovingLeastSquareReconstructionOperator : virtual public MapOperator
      * \brief Transpose apply option.
      */
     bool hasTransposeApplyImpl() const override;
+
+    // added QC for post-processing
+
+    /*!
+     * \brief send the source values to the target decomposition map
+     *
+     * \param[in] domainV domain values
+     * \param[out] domainDistV distributed domain/source values
+     *
+     */
+    void sendSource2TargetMap(
+        const TpetraMultiVector &domainV,
+        Teuchos::SerialDenseMatrix<LO, double> &domainDistV ) const;
+
+    /*!
+     * \brief detect and resolve discontinuity solutions
+     *
+     * \param[in] domainDistV the distributed source values
+     * \param[in,out] rangeIntrmV target intermediate solution after
+     * transferring \return Number of disc points
+     *
+     * We first detecting the disc regions with a smooth indicator, then
+     * correct non-smooth regions with WLS that uses some sort of ENO weights.
+     */
+    LO detectResolveDisc(
+        const Teuchos::SerialDenseMatrix<LO, double> &domainDistV,
+        TpetraMultiVector &rangeIntrmV ) const
+    {
+      // not impl
+    }
+
+    // added QC
 
   private:
     // Extract node coordinates and ids from an iterator.

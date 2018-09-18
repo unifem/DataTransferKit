@@ -326,6 +326,45 @@ void MovingLeastSquareReconstructionOperator<Basis, DIM>::getNodeCoordsAndIds(
     }
 }
 
+// added by QC
+// impl of detecting & resolving disc
+
+// step I send source values to target decomp map
+
+template <class Basis, int DIM>
+void MovingLeastSquareReconstructionOperator<Basis, DIM>::sendSource2TargetMap(
+    const TpetraMultiVector &domainV,
+    Teuchos::SerialDenseMatrix<LO, double> &domainDistV ) const
+{
+    // get the number of dimensions in the solution
+    const int col = domainV.getNumVectors();
+
+    // get the number of rows in the distributor
+    const int row = d_dist->getNumImports();
+
+    // reshape the dense matrix
+    domainDistV.reshape( row, col );
+
+    const int NN = domainV.getLocalLength();
+
+    // handy
+    typedef Teuchos::ArrayView<const double> cview_t;
+    typedef Teuchos::ArrayView<double> view_t;
+
+    for ( int dim = 0; dim < col; ++dim )
+    {
+        // create const view on current dimension
+        cview_t source_view = cview_t( domainV.getData( dim ).getRawPtr(), NN );
+        // create non-const view on current distributed domain
+        view_t dist_source_view = view_t( domainDistV[dim], row );
+
+        // send here
+        d_dist->distribute( source_view, dist_source_view );
+    }
+}
+
+// added by QC
+
 //---------------------------------------------------------------------------//
 
 } // end namespace DataTransferKit
