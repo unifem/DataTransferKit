@@ -41,6 +41,15 @@
 #ifndef DTK_MOVINGLEASTSQUARERECONSTRUCTIONOPERATOR_HPP
 #define DTK_MOVINGLEASTSQUARERECONSTRUCTIONOPERATOR_HPP
 
+// added by QC
+// define a symbol that enable writing indicator values to files
+#define TUNING_INDICATOR_VALUES
+
+#ifdef TUNING_INDICATOR_VALUES
+#include <string>
+#endif
+// added QC
+
 #include "DTK_MapOperator.hpp"
 #include "DTK_RadialBasisPolicy.hpp"
 
@@ -148,13 +157,14 @@ class MovingLeastSquareReconstructionOperator : virtual public MapOperator
         Teuchos::SerialDenseMatrix<LO, double> &domainDistV ) const;
 
     /*!
-     * \brief detect and resolve discontinuity solutions
+     * \brief detect and resolve discontinuous solutions
      *
      * \param[in] domainDistV the distributed source values
      * \param[in,out] rangeIntrmV target intermediate solution after
-     * transferring \return Number of disc points
+     * transferring
+     * \return Number of disc points
      *
-     * We first detecting the disc regions with a smooth indicator, similar to
+     * We first detect the disc regions with a smooth indicator, similar to
      * those used in WENO schemes. Then a simple cropping strategy is used to
      * ensure the values are bounded locally in the stencil.
      */
@@ -207,6 +217,10 @@ class MovingLeastSquareReconstructionOperator : virtual public MapOperator
     // added by QC
     double d_sigma;
 
+    // flag for post-processing correction
+    // added by QC
+    bool d_do_post;
+
     // save the point clouds of target and source for post-processing
     // the source is distributed point cloud
     // added by QC
@@ -215,6 +229,12 @@ class MovingLeastSquareReconstructionOperator : virtual public MapOperator
 
     // Coupling matrix.
     Teuchos::RCP<Tpetra::CrsMatrix<Scalar, LO, GO>> d_coupling_matrix;
+
+// added QC
+#ifdef TUNING_INDICATOR_VALUES
+    std::string d_file_name;
+#endif
+    // added QC
 };
 
 //---------------------------------------------------------------------------//

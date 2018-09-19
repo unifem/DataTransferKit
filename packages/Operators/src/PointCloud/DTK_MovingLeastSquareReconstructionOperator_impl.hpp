@@ -60,6 +60,12 @@
 
 #include <Tpetra_MultiVector.hpp>
 
+// added QC
+#ifdef TUNING_INDICATOR_VALUES
+#include <fstream>
+#endif
+// added QC
+
 namespace DataTransferKit
 {
 //---------------------------------------------------------------------------//
@@ -76,9 +82,15 @@ MovingLeastSquareReconstructionOperator<Basis, DIM>::
     , d_radius( 0.0 )
     , d_domain_entity_dim( 0 )
     , d_range_entity_dim( 0 )
+    // added by QC
     , d_leaf( 0 )
     , d_use_qrcp( false )
     , d_sigma( 3.0 )
+    , d_do_post( false )
+#ifdef TUNING_INDICATOR_VALUES
+    , d_file_name( "" )
+#endif
+// added by QC
 {
     // Determine if we are doing kNN search or radius search.
     if ( parameters.isParameter( "Type of Search" ) )
@@ -138,6 +150,16 @@ MovingLeastSquareReconstructionOperator<Basis, DIM>::
     }
     if ( d_sigma <= 0.0 )
         d_sigma = 3.0; // this might be too small
+    if ( parameters.isParameter( "Resolve Discontinuity" ) )
+    {
+        d_do_post = parameters.get<bool>( "Resolve Discontinuity" );
+    }
+#ifdef TUNING_INDICATOR_VALUES
+    if ( parameters.isParameter( "Indicator Output File" ) )
+    {
+        d_file_name = parameters.get<std::string>( "Indicator Output File" );
+    }
+#endif
     // added, QC
 }
 
@@ -229,8 +251,10 @@ void MovingLeastSquareReconstructionOperator<Basis, DIM>::setupImpl(
 
     // Build the source/target pairings.
     // added the leaf parameter, QC
+    const static bool use_new_search = true;
     d_pairings = Teuchos::rcp( new SplineInterpolationPairing<DIM>(
-        dist_sources, target_centers(), d_use_knn, d_knn, d_radius, d_leaf ) );
+        dist_sources, target_centers(), d_use_knn, d_knn, d_radius, d_leaf,
+        use_new_search ) );
     SplineInterpolationPairing<DIM> &pairings = *d_pairings;
     // SplineInterpolationPairing<DIM> pairings(
     //     dist_sources, target_centers(), d_use_knn, d_knn, d_radius, d_leaf );
@@ -301,7 +325,7 @@ void MovingLeastSquareReconstructionOperator<Basis, DIM>::applyImpl(
 
     // added QC
     // post-processing
-    if ( true )
+    if ( d_use_qrcp && d_do_post )
     {
         Teuchos::SerialDenseMatrix<LO, double> domainDistV;
         // send source to distributed target map
@@ -461,9 +485,9 @@ MovingLeastSquareReconstructionOperator<Basis, DIM>::detectResolveDisc(
         // function difference
         if ( h / hh <= 10.0 * eps )
         {
-            // in this case, it means the transfer is happened to be
+            // in this case, it means that the transfer is happened to be
             // fitting to the source center, which should be high order
-            // if the function is smooth, otherwise, then the function value
+            // if the function is smooth, otherwise, the function value
             // different should be ~O(1)
             if ( diff_abs >= 1e-2 )
                 return 10 * sigma;
@@ -486,8 +510,10 @@ MovingLeastSquareReconstructionOperator<Basis, DIM>::detectResolveDisc(
     //      tar: bad target intermediate solution
     // output parameter:
     //      tar: fixed value
+    // return
+    //      true if the value is actually been cropped, false otherwise
     auto crop_extremes = []( const cview_t &srcs, const stencil_t &stncl,
-                             const int nn, double &tar ) -> void {
+                             const int nn, double &tar ) -> bool {
         double src_max = std::numeric_limits<double>::min();
         double src_min = std::numeric_limits<double>::max();
 
@@ -500,14 +526,32 @@ MovingLeastSquareReconstructionOperator<Basis, DIM>::detectResolveDisc(
 
         // safe guard
         if ( tar >= src_min && tar <= src_max )
-            return;
+            return false;
 
         // cropping
         if ( tar >= src_max )
             tar = src_max;
         else
             tar = src_min;
+        return true;
     };
+
+#ifdef TUNING_INDICATOR_VALUES
+    static int _ctr_ = 0;
+    std::string fn;
+    bool do_output = false;
+    if ( d_file_name != "" )
+    {
+        fn = d_file_name + std::to_string( _ctr_ );
+        do_output = true;
+        _ctr_++;
+    }
+
+    Teuchos::RCP<std::ofstream> file;
+    if ( do_output )
+        file = Teuchos::rcp( new std::ofstream( fn.c_str() ) );
+    const bool can_output = do_output && file->is_open();
+#endif
 
     // actual detection and resolving here
 
@@ -545,15 +589,24 @@ MovingLeastSquareReconstructionOperator<Basis, DIM>::detectResolveDisc(
                 // compute the smoothness value
                 const double diff = compute_indicator_value(
                     src_view, stncl, nn, tgt_view[i], h, hh );
-                std::cout << diff << '\n';
                 if ( is_smooth( diff ) )
                     continue;
                 // got one disc
-                ++disc_counts;
-                crop_extremes( src_view, stncl, nn, tgt_view[i] );
+                disc_counts +=
+                    crop_extremes( src_view, stncl, nn, tgt_view[i] );
+
+#ifdef TUNING_INDICATOR_VALUES
+                if ( can_output )
+                    *file << dim << ',' << diff << '\n';
+#endif
             }
         }
     }
+
+#ifdef TUNING_INDICATOR_VALUES
+    if ( can_output )
+        file->close();
+#endif
 
     return disc_counts;
 }
