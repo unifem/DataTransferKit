@@ -154,15 +154,13 @@ class MovingLeastSquareReconstructionOperator : virtual public MapOperator
      * \param[in,out] rangeIntrmV target intermediate solution after
      * transferring \return Number of disc points
      *
-     * We first detecting the disc regions with a smooth indicator, then
-     * correct non-smooth regions with WLS that uses some sort of ENO weights.
+     * We first detecting the disc regions with a smooth indicator, similar to
+     * those used in WENO schemes. Then a simple cropping strategy is used to
+     * ensure the values are bounded locally in the stencil.
      */
     LO detectResolveDisc(
         const Teuchos::SerialDenseMatrix<LO, double> &domainDistV,
-        TpetraMultiVector &rangeIntrmV ) const
-    {
-      // not impl
-    }
+        TpetraMultiVector &rangeIntrmV ) const;
 
     // added QC
 
@@ -204,6 +202,16 @@ class MovingLeastSquareReconstructionOperator : virtual public MapOperator
     // store the distributor
     // added by QC
     Teuchos::RCP<CenterDistributor<DIM>> d_dist;
+
+    // epsilon used in the smoothness indicator
+    // added by QC
+    double d_sigma;
+
+    // save the point clouds of target and source for post-processing
+    // the source is distributed point cloud
+    // added by QC
+    // Teuchos::ArrayRCP<double> d_tar_pts;
+    // Teuchos::Array<double> d_src_pts;
 
     // Coupling matrix.
     Teuchos::RCP<Tpetra::CrsMatrix<Scalar, LO, GO>> d_coupling_matrix;

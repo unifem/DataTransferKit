@@ -41,6 +41,10 @@
 #ifndef DTK_MOVINGLEASTSQUARERECONSTRUCTIONOPERATOR_IMPL_HPP
 #define DTK_MOVINGLEASTSQUARERECONSTRUCTIONOPERATOR_IMPL_HPP
 
+#include <algorithm>
+#include <iostream>
+#include <limits>
+
 #include "DTK_BasicEntityPredicates.hpp"
 #include "DTK_CenterDistributor.hpp"
 #include "DTK_DBC.hpp"
@@ -74,6 +78,7 @@ MovingLeastSquareReconstructionOperator<Basis, DIM>::
     , d_range_entity_dim( 0 )
     , d_leaf( 0 )
     , d_use_qrcp( false )
+    , d_sigma( 3.0 )
 {
     // Determine if we are doing kNN search or radius search.
     if ( parameters.isParameter( "Type of Search" ) )
@@ -127,6 +132,12 @@ MovingLeastSquareReconstructionOperator<Basis, DIM>::
     {
         d_use_qrcp = parameters.get<bool>( "Use QRCP Impl" );
     }
+    if ( parameters.isParameter( "Indicator Threshold" ) )
+    {
+        d_sigma = parameters.get<double>( "Indicator Threshold" );
+    }
+    if ( d_sigma <= 0.0 )
+        d_sigma = 3.0; // this might be too small
     // added, QC
 }
 
@@ -152,6 +163,10 @@ void MovingLeastSquareReconstructionOperator<Basis, DIM>::setupImpl(
     // Determine if we have range and domain data on this process.
     bool nonnull_domain = Teuchos::nonnull( domain_space->entitySet() );
     bool nonnull_range = Teuchos::nonnull( range_space->entitySet() );
+
+    // remove unused warning...
+    (void)nonnull_domain;
+    (void)nonnull_range;
 
     // Extract the source nodes and their ids.
     Teuchos::ArrayRCP<double> source_centers;
@@ -251,9 +266,15 @@ void MovingLeastSquareReconstructionOperator<Basis, DIM>::setupImpl(
                 target_view, pairings.childCenterIds( i ), dist_sources, *basis,
                 pairings.parentSupportRadius( i ), d_use_qrcp );
 
+            // added QC, set the real radius
+            pairings.setRadius( i, local_problem.r() );
+
             // Get MLS shape function values for this target point.
             values = local_problem.shapeFunction();
             nn = values.size();
+
+            // added QC, set the real nn
+            pairings.setSize( i, nn );
 
             // Populate the interpolation matrix row.
             pair_gids = pairings.childCenterIds( i );
@@ -277,6 +298,18 @@ void MovingLeastSquareReconstructionOperator<Basis, DIM>::applyImpl(
     double alpha, double beta ) const
 {
     d_coupling_matrix->apply( X, Y, mode, alpha, beta );
+
+    // added QC
+    // post-processing
+    if ( true )
+    {
+        Teuchos::SerialDenseMatrix<LO, double> domainDistV;
+        // send source to distributed target map
+        sendSource2TargetMap( X, domainDistV );
+        // fixing
+        detectResolveDisc( domainDistV, Y );
+    }
+    // added QC
 }
 
 //---------------------------------------------------------------------------//
@@ -345,22 +378,184 @@ void MovingLeastSquareReconstructionOperator<Basis, DIM>::sendSource2TargetMap(
     // reshape the dense matrix
     domainDistV.reshape( row, col );
 
-    const int NN = domainV.getLocalLength();
-
     // handy
-    typedef Teuchos::ArrayView<const double> cview_t;
+    typedef Teuchos::ArrayRCP<const double> cview_t;
     typedef Teuchos::ArrayView<double> view_t;
+
+    // NOTE here we assume the local index aligns with the global ordering
+    // in multivector, which should be fine??
 
     for ( int dim = 0; dim < col; ++dim )
     {
         // create const view on current dimension
-        cview_t source_view = cview_t( domainV.getData( dim ).getRawPtr(), NN );
+        cview_t source_view = domainV.getData( dim );
         // create non-const view on current distributed domain
         view_t dist_source_view = view_t( domainDistV[dim], row );
 
         // send here
-        d_dist->distribute( source_view, dist_source_view );
+        d_dist->distribute( source_view(), dist_source_view );
     }
+}
+
+template <class Basis, int DIM>
+typename MovingLeastSquareReconstructionOperator<Basis, DIM>::LO
+MovingLeastSquareReconstructionOperator<Basis, DIM>::detectResolveDisc(
+    const Teuchos::SerialDenseMatrix<LO, double> &domainDistV,
+    TpetraMultiVector &rangeIntrmV ) const
+{
+    // handy
+    typedef Teuchos::ArrayView<const double> cview_t;
+    typedef Teuchos::ArrayView<double> view_t;
+    typedef Teuchos::ArrayView<const unsigned> stencil_t;
+
+    // machine precision
+    const static double eps = std::numeric_limits<double>::epsilon();
+    const double sigma = d_sigma;
+
+    // implement the smoothness indicator in a lambda
+    // input parameters:
+    //      srcs: complete source value view
+    //      stncl: local stencil, which might be larger
+    //      nn: actual stencil size
+    //      tar: target intermediate solution
+    //      h: closest distance from target center to source stencil
+    //      hh: the actual stencil radii
+    const auto compute_indicator_value =
+        [=]( const cview_t &srcs, const stencil_t &stncl, const int nn,
+             const double tar, const double h, const double hh ) -> double {
+        //=============================================================
+        // step 1, compute the largest abs value in sources and target
+        //=============================================================
+
+        double src_max = 0.0;
+        for ( int i = 0; i < nn; ++i )
+        {
+            src_max = std::max( src_max, std::abs( srcs[stncl[i]] ) );
+        }
+        // treatment 1, if the max value is exactly zero, return true
+        // regardless the value of h
+        const double max_v = std::max( src_max, std::abs( tar ) );
+        if ( max_v == 0.0 )
+            return 0.0;
+
+        //===============================================
+        // step 2, get the closest source function value
+        //===============================================
+
+        const double src = srcs[stncl[0]];
+        // normalize the function values
+        const double src_nrm = src / max_v;
+        const double tar_nrm = tar / max_v;
+
+        // treatment 2, if src_nrm and tar_nrm are too close to each other
+        // return true regardless h, avoiding cancellation
+        const double diff_abs = std::abs( src_nrm - tar_nrm );
+        if ( diff_abs <= 10.0 * eps )
+            return 0.0;
+
+        //===============================================
+        // step 3, Compute differentiation
+        //===============================================
+
+        // treatment 3, if h is too close to zero, direct analyze the
+        // function difference
+        if ( h / hh <= 10.0 * eps )
+        {
+            // in this case, it means the transfer is happened to be
+            // fitting to the source center, which should be high order
+            // if the function is smooth, otherwise, then the function value
+            // different should be ~O(1)
+            if ( diff_abs >= 1e-2 )
+                return 10 * sigma;
+            return 0.0;
+        }
+
+        return diff_abs / h;
+    };
+
+    // determine smoothness
+    const auto is_smooth = [=]( const double diff ) -> bool {
+        return diff <= sigma;
+    };
+
+    // crop extremes
+    // input parameters:
+    //      srcs: complete source value view
+    //      stncl: local stencil, which might be larger
+    //      nn: actual stencil size
+    //      tar: bad target intermediate solution
+    // output parameter:
+    //      tar: fixed value
+    auto crop_extremes = []( const cview_t &srcs, const stencil_t &stncl,
+                             const int nn, double &tar ) -> void {
+        double src_max = std::numeric_limits<double>::min();
+        double src_min = std::numeric_limits<double>::max();
+
+        for ( int i = 0; i < nn; ++i )
+        {
+            const double v = srcs[stncl[i]];
+            src_max = std::max( src_max, v );
+            src_min = std::min( src_min, v );
+        }
+
+        // safe guard
+        if ( tar >= src_min && tar <= src_max )
+            return;
+
+        // cropping
+        if ( tar >= src_max )
+            tar = src_max;
+        else
+            tar = src_min;
+    };
+
+    // actual detection and resolving here
+
+    LO disc_counts = 0;
+    const int nv_tar = rangeIntrmV.getLocalLength();
+    const int col = domainDistV.numCols();
+    // get the stencil size
+    Teuchos::ArrayRCP<SupportId> stncl_size = d_pairings->childrenPerParent();
+    // get h
+    const Teuchos::Array<double> &hs = d_pairings->hs();
+
+    // NOTE here we assume the local index aligns with the global ordering
+    // in multivector, which should be fine??
+
+    for ( int dim = 0; dim < col; ++dim )
+    {
+        // create constant view of src values on this dimension
+        cview_t src_view = cview_t( domainDistV[dim], domainDistV.numRows() );
+        // create non-constant view of target solution on this dimension
+        Teuchos::ArrayRCP<double> tgt_view = rangeIntrmV.getDataNonConst( dim );
+
+        for ( int i = 0; i < nv_tar; ++i )
+        {
+            // if there is not support, do nothing
+            if ( 0 < d_pairings->childCenterIds( i ).size() )
+            {
+                // get the stencil
+                stencil_t stncl = d_pairings->childCenterIds( i );
+                // get the actual number of points used in stencil
+                const int nn = stncl_size[i];
+                // get the h
+                const double h = hs[i];
+                // get the hh
+                const double hh = d_pairings->parentSupportRadius( i );
+                // compute the smoothness value
+                const double diff = compute_indicator_value(
+                    src_view, stncl, nn, tgt_view[i], h, hh );
+                std::cout << diff << '\n';
+                if ( is_smooth( diff ) )
+                    continue;
+                // got one disc
+                ++disc_counts;
+                crop_extremes( src_view, stncl, nn, tgt_view[i] );
+            }
+        }
+    }
+
+    return disc_counts;
 }
 
 // added by QC
