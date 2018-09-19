@@ -75,6 +75,7 @@ SplineInterpolationPairing<DIM>::SplineInterpolationPairing(
     d_pairings.resize( num_parents );
     d_pair_sizes = Teuchos::ArrayRCP<EntityId>( num_parents );
     d_radii.resize( num_parents );
+    d_hs.resize( num_parents );
 
     // Search for pairs
     for ( unsigned i = 0; i < num_parents; ++i )
@@ -108,6 +109,12 @@ SplineInterpolationPairing<DIM>::SplineInterpolationPairing(
 
         // Get the size of the support.
         d_pair_sizes[i] = d_pairings[i].size();
+
+        // added,QC
+        // computing the closest h
+        d_hs[i] = EuclideanDistance<DIM>::distance(
+            parent_centers( DIM * i, DIM ).getRawPtr(),
+            child_centers( DIM * d_pairings[i].front(), DIM ).getRawPtr() );
     }
 }
 

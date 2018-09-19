@@ -84,6 +84,18 @@ class SplineInterpolationPairing
     // Get the support radius of a given parent.
     double parentSupportRadius( const unsigned parent_id ) const;
 
+    // added QC
+    inline void setRadius( const unsigned parent_id, double r )
+    {
+        d_radii[parent_id] = r;
+    }
+    inline void setSize( const unsigned parent_id, EntityId size )
+    {
+        d_pair_sizes[parent_id] = size;
+    }
+    inline const Teuchos::Array<double> &hs() const { return d_hs; }
+    // added QC
+
   private:
     // Pairings.
     Teuchos::Array<Teuchos::Array<unsigned>> d_pairings;
@@ -93,6 +105,10 @@ class SplineInterpolationPairing
 
     // Parent center support radius.
     Teuchos::Array<double> d_radii;
+
+    // Closest h
+    // added by QC
+    Teuchos::Array<double> d_hs;
 };
 
 //---------------------------------------------------------------------------//
