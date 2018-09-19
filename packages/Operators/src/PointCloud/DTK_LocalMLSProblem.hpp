@@ -87,6 +87,10 @@ class LocalMLSProblem
         return d_shape_function();
     }
 
+    // added by QC
+    inline double r() const { return d_radii; }
+    // added by QC
+
   private:
     // Get a polynomial coefficient.
     double polynomialCoefficient(
@@ -95,6 +99,9 @@ class LocalMLSProblem
     // Check if a matrix is full rank.
     bool
     isFullRank( const Teuchos::SerialDenseMatrix<int, double> &matrix ) const;
+
+    // Real radii, added by QC
+    double d_radii;
 
   private:
     // Moving least square shape function.

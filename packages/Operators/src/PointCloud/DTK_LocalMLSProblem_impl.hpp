@@ -142,6 +142,7 @@ LocalMLSProblem<Basis, DIM>::LocalMLSProblem(
             target_center.getRawPtr(), source_center_view.getRawPtr() );
         radius *= ( 1.0 + EXPANDED_PERCENTAGE ); // expand the radius
     }
+    d_radii = radius;
     // added QC
 
     // added, QC
@@ -155,23 +156,24 @@ LocalMLSProblem<Basis, DIM>::LocalMLSProblem(
 
         // create row weights array
         Teuchos::SerialDenseVector<int, double> w( num_sources );
-        // build row weights
+        // create column geometrical scaling factor
+        double s = 0.0;
+        // build row weights and geometrical scaling factor
+        // NOTE that we cannot use the point with largest radius for the
+        // scaling factor, since it may not have the largest value in
+        // each of the dimension
         for ( int i = 0; i < num_sources; ++i )
         {
             source_center_view = source_centers( DIM * source_lids[i], DIM );
+            for ( int dim = 0; dim < DIM; ++dim )
+                s = std::max( s, std::abs( source_center_view[dim] -
+                                           target_center[dim] ) );
             // compute row weights
             const double dist = EuclideanDistance<DIM>::distance(
                 target_center.getRawPtr(), source_center_view.getRawPtr() );
             w[i] = BP::evaluateValue( basis, radius, dist );
         }
 
-        // create column geometrical scaling factor
-        double s = 0.0;
-        source_center_view =
-            source_centers( DIM * source_lids[num_sources - 1], DIM );
-        for ( int dim = 0; dim < DIM; ++dim )
-            s = std::max(
-                s, std::abs( source_center_view[dim] - target_center[dim] ) );
         if ( s == 0.0 )
             s = 1.0;
         s = 1.0 / s; //  inverse s
