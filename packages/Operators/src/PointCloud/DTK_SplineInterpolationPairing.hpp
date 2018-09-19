@@ -64,11 +64,12 @@ class SplineInterpolationPairing
   public:
     // Constructor.
     // added the leaf parameter, QC
+    // added the use_new_search, QC
     SplineInterpolationPairing(
         const Teuchos::ArrayView<const double> &child_centers,
         const Teuchos::ArrayView<const double> &parent_centers,
         const bool use_knn, const unsigned num_neighbors, const double radius,
-        const int leaf = 0 );
+        const int leaf = 0, const bool use_new_search = false );
 
     // Given a parent center local id get the ids of the child centers within
     // the given radius.
