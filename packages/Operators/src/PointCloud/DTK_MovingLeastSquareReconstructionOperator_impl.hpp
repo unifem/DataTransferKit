@@ -85,7 +85,7 @@ MovingLeastSquareReconstructionOperator<Basis, DIM>::
     // added by QC
     , d_leaf( 0 )
     , d_use_qrcp( false )
-    , d_sigma( 3.0 )
+    , d_sigma( 2.0 )
     , d_do_post( false )
     , d_rho( -1.0 )
 #ifdef TUNING_INDICATOR_VALUES
@@ -150,7 +150,7 @@ MovingLeastSquareReconstructionOperator<Basis, DIM>::
         d_sigma = parameters.get<double>( "Indicator Threshold" );
     }
     if ( d_sigma <= 0.0 )
-        d_sigma = 3.0; // this might be too small
+        d_sigma = 2.0; // this might be too small
     if ( parameters.isParameter( "Resolve Discontinuity" ) )
     {
         d_do_post = parameters.get<bool>( "Resolve Discontinuity" );
