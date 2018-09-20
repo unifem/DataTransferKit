@@ -466,14 +466,18 @@ MovingLeastSquareReconstructionOperator<Basis, DIM>::detectResolveDisc(
         if ( max_v == 0.0 )
             return 0.0;
 
+        // if src_max is zero
+        if ( src_max == 0.0 )
+            src_max = max_v;
+
         //===============================================
         // step 2, get the closest source function value
         //===============================================
 
         const double src = srcs[stncl[0]];
         // normalize the function values
-        const double src_nrm = src / max_v;
-        const double tar_nrm = tar / max_v;
+        const double src_nrm = src / src_max;
+        const double tar_nrm = tar / src_max;
 
         // treatment 2, if src_nrm and tar_nrm are too close to each other
         // return true regardless h, avoiding cancellation
