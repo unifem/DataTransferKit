@@ -86,7 +86,7 @@ SplineInterpolationPairing<DIM>::SplineInterpolationPairing(
     // the table that estimate the one-ring neighbor
     const static int SMALL_KNN[3] = {3, 6, 7};
     const static int small_knn = SMALL_KNN[DIM - 1];
-    // then we use the maximal length to define radius that expand by 4 times
+    // then we use the maximal length to define radius that expand by 5 times
     // to query the mesh
     // NOTE that this still complete resolves issues with stretched grids...
     // added QC
@@ -107,7 +107,7 @@ SplineInterpolationPairing<DIM>::SplineInterpolationPairing(
                     h, EuclideanDistance<DIM>::distance(
                            parent_centers( DIM * i, DIM ).getRawPtr(),
                            child_centers( DIM * *itr, DIM ).getRawPtr() ) );
-            d_radii[i] = 4.2 * h; // expand 4times+20%
+            d_radii[i] = 5.1 * h; // expand 5times+10%, might be too large!
             d_pairings[i] =
                 tree.radiusSearch( parent_centers( DIM * i, DIM ), d_radii[i] );
         }
