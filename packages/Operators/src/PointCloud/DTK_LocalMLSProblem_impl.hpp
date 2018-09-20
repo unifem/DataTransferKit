@@ -57,7 +57,7 @@
 
 // added, QC
 // expand the locally adaptive radius by the following percentage
-#define EXPANDED_PERCENTAGE 0.2
+#define EXPANDED_PERCENTAGE 0.1
 
 #if defined( INTEL_CXML )
 #define PREFIX __stdcall
@@ -108,7 +108,7 @@ LocalMLSProblem<Basis, DIM>::LocalMLSProblem(
     const Teuchos::ArrayView<const double> &target_center,
     const Teuchos::ArrayView<const unsigned> &source_lids,
     const Teuchos::ArrayView<const double> &source_centers, const Basis &basis,
-    const double radius_, bool use_new_impl )
+    const double radius_, bool use_new_impl, const double rho )
     : d_shape_function( source_lids.size() )
 {
     DTK_REQUIRE( 0 == source_centers.size() % DIM );
@@ -121,12 +121,22 @@ LocalMLSProblem<Basis, DIM>::LocalMLSProblem(
     // added QC
     // for each dimension, a preferred choice of row size is 1.5*column
     // DTK2 only uses quadratic polynomial basis thus having the following table
+    const static int COLS[3] = {3, 6, 10};
+
     // However, for solution transfer problem, we have observed that a larger
-    // neighborhood can super-converge. Therefore, we choose 3*column
+    // neighborhood can super-converge. Therefore, we choose 3*column, i.e.
     const static int PREFERRED_ROWS[3] = {9, 18, 30};
-    if ( num_sources > PREFERRED_ROWS[DIM - 1] )
+
+    // we set the 1.5*col to be the min requirement, and passin rho to tune
+    // the choice of rows, i.e. number of points
+    const static int MIN_ROWS[3] = {5, 9, 15};
+
+    int row_choice = PREFERRED_ROWS[DIM - 1];
+    if ( rho > 0.0 && rho * COLS[DIM - 1] >= MIN_ROWS[DIM - 1] )
+        row_choice = rho * COLS[DIM - 1];
+    if ( num_sources > row_choice )
     {
-        num_sources = PREFERRED_ROWS[DIM - 1];
+        num_sources = row_choice;
     }
     d_shape_function.resize( num_sources, 0.0 );
     // use adaptive radius
@@ -140,9 +150,9 @@ LocalMLSProblem<Basis, DIM>::LocalMLSProblem(
             source_centers( DIM * source_lids[num_sources - 1], DIM );
         radius = EuclideanDistance<DIM>::distance(
             target_center.getRawPtr(), source_center_view.getRawPtr() );
+        d_radii = radius;
         radius *= ( 1.0 + EXPANDED_PERCENTAGE ); // expand the radius
     }
-    d_radii = radius;
     // added QC
 
     // added, QC
@@ -150,7 +160,7 @@ LocalMLSProblem<Basis, DIM>::LocalMLSProblem(
     {
         // the new implementation
 
-        const int num_cols = PREFERRED_ROWS[DIM - 1] / 3;
+        const int num_cols = COLS[DIM - 1];
 
         Teuchos::ArrayView<const double> source_center_view;
 
@@ -233,11 +243,13 @@ LocalMLSProblem<Basis, DIM>::LocalMLSProblem(
                 break;
         } while ( true );
         DTK_CHECK( rank != 0 );
+#ifndef NDEBUG
         if ( rank < num_cols )
             std::cerr << "\nWARNING! rank truncated in QRCP from " << num_cols
                       << " to " << rank << ", " << __FILE__ << ':' << __LINE__
                       << '\n'
                       << std::endl;
+#endif
 
         //=======================================
         // form the coefficient by implicit diff
