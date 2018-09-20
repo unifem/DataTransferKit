@@ -87,6 +87,7 @@ MovingLeastSquareReconstructionOperator<Basis, DIM>::
     , d_use_qrcp( false )
     , d_sigma( 3.0 )
     , d_do_post( false )
+    , d_rho( -1.0 )
 #ifdef TUNING_INDICATOR_VALUES
     , d_file_name( "" )
 #endif
@@ -153,6 +154,10 @@ MovingLeastSquareReconstructionOperator<Basis, DIM>::
     if ( parameters.isParameter( "Resolve Discontinuity" ) )
     {
         d_do_post = parameters.get<bool>( "Resolve Discontinuity" );
+    }
+    if ( parameters.isParameter( "Local Rho Scaling" ) )
+    {
+        d_rho = parameters.get<double>( "Local Rho Scaling" );
     }
 #ifdef TUNING_INDICATOR_VALUES
     if ( parameters.isParameter( "Indicator Output File" ) )
@@ -251,10 +256,9 @@ void MovingLeastSquareReconstructionOperator<Basis, DIM>::setupImpl(
 
     // Build the source/target pairings.
     // added the leaf parameter, QC
-    const static bool use_new_search = true;
     d_pairings = Teuchos::rcp( new SplineInterpolationPairing<DIM>(
         dist_sources, target_centers(), d_use_knn, d_knn, d_radius, d_leaf,
-        use_new_search ) );
+        d_use_qrcp ) );
     SplineInterpolationPairing<DIM> &pairings = *d_pairings;
     // SplineInterpolationPairing<DIM> pairings(
     //     dist_sources, target_centers(), d_use_knn, d_knn, d_radius, d_leaf );
@@ -288,7 +292,7 @@ void MovingLeastSquareReconstructionOperator<Basis, DIM>::setupImpl(
             // Build the local interpolation problem.
             LocalMLSProblem<Basis, DIM> local_problem(
                 target_view, pairings.childCenterIds( i ), dist_sources, *basis,
-                pairings.parentSupportRadius( i ), d_use_qrcp );
+                pairings.parentSupportRadius( i ), d_use_qrcp, d_rho );
 
             // added QC, set the real radius
             pairings.setRadius( i, local_problem.r() );
@@ -589,16 +593,18 @@ MovingLeastSquareReconstructionOperator<Basis, DIM>::detectResolveDisc(
                 // compute the smoothness value
                 const double diff = compute_indicator_value(
                     src_view, stncl, nn, tgt_view[i], h, hh );
+
+#ifdef TUNING_INDICATOR_VALUES
+                // this format can be easily loaded into Python/MATLAB/Octave
+                if ( can_output )
+                    *file << dim << ' ' << diff << '\n';
+#endif
+
                 if ( is_smooth( diff ) )
                     continue;
                 // got one disc
                 disc_counts +=
                     crop_extremes( src_view, stncl, nn, tgt_view[i] );
-
-#ifdef TUNING_INDICATOR_VALUES
-                if ( can_output )
-                    *file << dim << ',' << diff << '\n';
-#endif
             }
         }
     }

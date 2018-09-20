@@ -221,6 +221,10 @@ class MovingLeastSquareReconstructionOperator : virtual public MapOperator
     // added by QC
     bool d_do_post;
 
+    // local problem row scaling rho, i.e. rows=rho*num_col
+    // added by QC
+    double d_rho;
+
     // save the point clouds of target and source for post-processing
     // the source is distributed point cloud
     // added by QC
