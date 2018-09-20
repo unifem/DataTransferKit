@@ -51,16 +51,19 @@ template class SplineCoefficientMatrix<WendlandBasis<0>, 1>;
 template class SplineCoefficientMatrix<WendlandBasis<2>, 1>;
 template class SplineCoefficientMatrix<WendlandBasis<4>, 1>;
 template class SplineCoefficientMatrix<WendlandBasis<6>, 1>;
+template class SplineCoefficientMatrix<WendlandBasis<21>, 1>;
 
 template class SplineCoefficientMatrix<WendlandBasis<0>, 2>;
 template class SplineCoefficientMatrix<WendlandBasis<2>, 2>;
 template class SplineCoefficientMatrix<WendlandBasis<4>, 2>;
 template class SplineCoefficientMatrix<WendlandBasis<6>, 2>;
+template class SplineCoefficientMatrix<WendlandBasis<21>, 2>;
 
 template class SplineCoefficientMatrix<WendlandBasis<0>, 3>;
 template class SplineCoefficientMatrix<WendlandBasis<2>, 3>;
 template class SplineCoefficientMatrix<WendlandBasis<4>, 3>;
 template class SplineCoefficientMatrix<WendlandBasis<6>, 3>;
+template class SplineCoefficientMatrix<WendlandBasis<21>, 3>;
 
 template class SplineCoefficientMatrix<WuBasis<2>, 1>;
 template class SplineCoefficientMatrix<WuBasis<4>, 1>;
