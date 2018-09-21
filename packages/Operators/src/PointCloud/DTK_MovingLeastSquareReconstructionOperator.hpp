@@ -231,6 +231,10 @@ class MovingLeastSquareReconstructionOperator : virtual public MapOperator
     // Teuchos::ArrayRCP<double> d_tar_pts;
     // Teuchos::Array<double> d_src_pts;
 
+    // added a reference to the parameter
+    // added by QC
+    Teuchos::ParameterList &d_pars;
+
     // Coupling matrix.
     Teuchos::RCP<Tpetra::CrsMatrix<Scalar, LO, GO>> d_coupling_matrix;
 

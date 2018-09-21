@@ -91,6 +91,7 @@ MovingLeastSquareReconstructionOperator<Basis, DIM>::
 #ifdef TUNING_INDICATOR_VALUES
     , d_file_name( "" )
 #endif
+    , d_pars( const_cast<Teuchos::ParameterList &>( parameters ) )
 // added by QC
 {
     // Determine if we are doing kNN search or radius search.
@@ -335,7 +336,11 @@ void MovingLeastSquareReconstructionOperator<Basis, DIM>::applyImpl(
         // send source to distributed target map
         sendSource2TargetMap( X, domainDistV );
         // fixing
-        detectResolveDisc( domainDistV, Y );
+        const int counts = detectResolveDisc( domainDistV, Y );
+        // give the information to the application codes
+        // note that we assume a parameter is maintained with at least
+        // the safe life span of the mapper
+        d_pars.set( "_DISC_COUNTS_", counts );
     }
     // added QC
 }
