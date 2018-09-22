@@ -42,6 +42,7 @@
 #define DTK_LOCALMLSPROBLEM_IMPL_HPP
 
 #include <algorithm>
+#include <cmath>
 #include <functional>
 #include <iostream>
 #include <limits>
@@ -133,7 +134,7 @@ LocalMLSProblem<Basis, DIM>::LocalMLSProblem(
 
     int row_choice = PREFERRED_ROWS[DIM - 1];
     if ( rho > 0.0 && rho * COLS[DIM - 1] >= MIN_ROWS[DIM - 1] )
-        row_choice = rho * COLS[DIM - 1];
+        row_choice = std::ceil( rho * COLS[DIM - 1] );
     if ( num_sources > row_choice )
     {
         num_sources = row_choice;
