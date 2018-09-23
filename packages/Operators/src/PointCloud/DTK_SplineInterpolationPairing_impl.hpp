@@ -89,13 +89,10 @@ SplineInterpolationPairing<DIM>::SplineInterpolationPairing(
     // then we use the maximal length to define radius that expand by 5 times
     // to query the mesh
     // NOTE that this still complete resolves issues with stretched grids...
-    // added QC
 
-    // Search for pairs
-    for ( unsigned i = 0; i < num_parents; ++i )
+    if ( use_new_search )
     {
-        // added QC
-        if ( use_new_search )
+        for ( unsigned i = 0; i < num_parents; ++i )
         {
             // Not efficient in terms of memory allocation, but we have
             // no choice here
@@ -110,10 +107,24 @@ SplineInterpolationPairing<DIM>::SplineInterpolationPairing(
             d_radii[i] = 5.1 * h; // expand 5times+10%, might be too large!
             d_pairings[i] =
                 tree.radiusSearch( parent_centers( DIM * i, DIM ), d_radii[i] );
+
+            // Get the size of the support.
+            d_pair_sizes[i] = d_pairings[i].size();
+
+            // added,QC
+            // computing the closest h
+            d_hs[i] = EuclideanDistance<DIM>::distance(
+                parent_centers( DIM * i, DIM ).getRawPtr(),
+                child_centers( DIM * d_pairings[i].front(), DIM ).getRawPtr() );
         }
-        // added QC
-        else
+    }
+    // added QC
+    else
+    {
+        // Search for pairs
+        for ( unsigned i = 0; i < num_parents; ++i )
         {
+
             // If kNN do the nearest neighbor search for kNN and calculate a
             // radius. The radius will be a small fraction larger than the
             // farthest neighbor. An alternative to this would be to find the
@@ -141,16 +152,16 @@ SplineInterpolationPairing<DIM>::SplineInterpolationPairing(
                     tree.radiusSearch( parent_centers( DIM * i, DIM ), radius );
                 d_radii[i] = radius;
             }
+
+            // Get the size of the support.
+            d_pair_sizes[i] = d_pairings[i].size();
+
+            // added,QC
+            // computing the closest h
+            d_hs[i] = EuclideanDistance<DIM>::distance(
+                parent_centers( DIM * i, DIM ).getRawPtr(),
+                child_centers( DIM * d_pairings[i].front(), DIM ).getRawPtr() );
         }
-
-        // Get the size of the support.
-        d_pair_sizes[i] = d_pairings[i].size();
-
-        // added,QC
-        // computing the closest h
-        d_hs[i] = EuclideanDistance<DIM>::distance(
-            parent_centers( DIM * i, DIM ).getRawPtr(),
-            child_centers( DIM * d_pairings[i].front(), DIM ).getRawPtr() );
     }
 }
 
