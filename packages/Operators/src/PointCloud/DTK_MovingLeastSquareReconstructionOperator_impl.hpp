@@ -85,7 +85,6 @@ MovingLeastSquareReconstructionOperator<Basis, DIM>::
     // added by QC
     , d_leaf( 0 )
     , d_use_qrcp( false )
-    , d_sigma( 2.0 )
     , d_do_post( false )
     , d_rho( -1.0 )
 #ifdef TUNING_INDICATOR_VALUES
@@ -146,12 +145,6 @@ MovingLeastSquareReconstructionOperator<Basis, DIM>::
     {
         d_use_qrcp = parameters.get<bool>( "Use QRCP Impl" );
     }
-    if ( parameters.isParameter( "Indicator Threshold" ) )
-    {
-        d_sigma = parameters.get<double>( "Indicator Threshold" );
-    }
-    if ( d_sigma <= 0.0 )
-        d_sigma = 2.0; // this might be too small
     if ( parameters.isParameter( "Resolve Discontinuity" ) )
     {
         d_do_post = parameters.get<bool>( "Resolve Discontinuity" );
@@ -319,6 +312,8 @@ void MovingLeastSquareReconstructionOperator<Basis, DIM>::setupImpl(
     DTK_ENSURE( d_coupling_matrix->isFillComplete() );
 }
 
+#define DO_POST_RESOLVING_DISC Teuchos::TRANS
+
 //---------------------------------------------------------------------------//
 // Apply the operator.
 template <class Basis, int DIM>
@@ -326,17 +321,18 @@ void MovingLeastSquareReconstructionOperator<Basis, DIM>::applyImpl(
     const TpetraMultiVector &X, TpetraMultiVector &Y, Teuchos::ETransp mode,
     double alpha, double beta ) const
 {
-    d_coupling_matrix->apply( X, Y, mode, alpha, beta );
+    d_coupling_matrix->apply( X, Y, Teuchos::NO_TRANS, 1.0, beta );
 
     // added QC
     // post-processing
-    if ( d_use_qrcp && d_do_post )
+    if ( d_use_qrcp && mode == DO_POST_RESOLVING_DISC )
     {
+        const double sigma = alpha <= 0.0 ? 2.0 : alpha;
         Teuchos::SerialDenseMatrix<LO, double> domainDistV;
         // send source to distributed target map
         sendSource2TargetMap( X, domainDistV );
         // fixing
-        const int counts = detectResolveDisc( domainDistV, Y );
+        const int counts = detectResolveDisc( domainDistV, Y, sigma );
         // give the information to the application codes
         // note that we assume a parameter is maintained with at least
         // the safe life span of the mapper
@@ -434,7 +430,7 @@ template <class Basis, int DIM>
 typename MovingLeastSquareReconstructionOperator<Basis, DIM>::LO
 MovingLeastSquareReconstructionOperator<Basis, DIM>::detectResolveDisc(
     const Teuchos::SerialDenseMatrix<LO, double> &domainDistV,
-    TpetraMultiVector &rangeIntrmV ) const
+    TpetraMultiVector &rangeIntrmV, const double sigma_ ) const
 {
     // handy
     typedef Teuchos::ArrayView<const double> cview_t;
@@ -443,7 +439,7 @@ MovingLeastSquareReconstructionOperator<Basis, DIM>::detectResolveDisc(
 
     // machine precision
     const static double eps = std::numeric_limits<double>::epsilon();
-    const double sigma = d_sigma;
+    const double sigma = sigma_;
 
     // implement the smoothness indicator in a lambda
     // input parameters:

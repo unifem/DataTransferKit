@@ -132,6 +132,8 @@ class MovingLeastSquareReconstructionOperator : virtual public MapOperator
     /*!
      * \brief Apply the operator.
      */
+    // NOTE we use mode == TRANS indicate doing post disc correction, QC
+    // NOTE we use alpha to pass in the smoothness indicator threshold sigma
     void applyImpl(
         const TpetraMultiVector &X, TpetraMultiVector &Y,
         Teuchos::ETransp mode = Teuchos::NO_TRANS,
@@ -162,6 +164,7 @@ class MovingLeastSquareReconstructionOperator : virtual public MapOperator
      * \param[in] domainDistV the distributed source values
      * \param[in,out] rangeIntrmV target intermediate solution after
      * transferring
+     * \param[in] sigma threshold for smoothness indicator
      * \return Number of disc points
      *
      * We first detect the disc regions with a smooth indicator, similar to
@@ -170,7 +173,7 @@ class MovingLeastSquareReconstructionOperator : virtual public MapOperator
      */
     LO detectResolveDisc(
         const Teuchos::SerialDenseMatrix<LO, double> &domainDistV,
-        TpetraMultiVector &rangeIntrmV ) const;
+        TpetraMultiVector &rangeIntrmV, const double sigma ) const;
 
     // added QC
 
@@ -212,10 +215,6 @@ class MovingLeastSquareReconstructionOperator : virtual public MapOperator
     // store the distributor
     // added by QC
     Teuchos::RCP<CenterDistributor<DIM>> d_dist;
-
-    // epsilon used in the smoothness indicator
-    // added by QC
-    double d_sigma;
 
     // flag for post-processing correction
     // added by QC
