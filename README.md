@@ -1,5 +1,5 @@
-Data Transfer Kit (DTK) Version 2.0 with *UNIFEM* Extension
-===========================================================
+Data Transfer Kit (DTK) Version 2.0 with *AWLS* Extension
+==========================================================
 
 [![Stories in Ready](https://badge.waffle.io/ORNL-CEES/DataTransferKit.svg?label=ready&title=Ready)](http://waffle.io/ORNL-CEES/DataTransferKit)
 [![Build Status](https://travis-ci.org/chiao45/DataTransferKit.svg?branch=dev-qc)](https://travis-ci.org/chiao45/DataTransferKit)

@@ -66,7 +66,7 @@ std::string DataTransferKitException::generate_output( const std::string &cond,
                                                        const int line ) const
 {
     std::ostringstream output;
-    output << "unifem::DataTransferKit DataTransferKitException: " << cond
+    output << "chiao45::DataTransferKit DataTransferKitException: " << cond
            << ", failed in " << file << ", line " << line << "." << std::endl;
     return output.str();
 }
