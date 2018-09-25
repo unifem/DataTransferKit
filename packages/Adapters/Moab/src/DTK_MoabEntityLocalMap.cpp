@@ -89,11 +89,16 @@ double MoabEntityLocalMap::measure( const Entity &entity ) const
 void MoabEntityLocalMap::centroid(
     const Entity &entity, const Teuchos::ArrayView<double> &centroid ) const
 {
+    // added, QC
+    // NOTE that MOAB stores coordinates in 3D, where centroid size might be
+    // less than 3 due to lower dimension thus requiring a buffer
+    double buffer[3];
+    // added, QC
     // Node case.
     if ( 0 == entity.topologicalDimension() )
     {
         moab::EntityHandle handle = MoabHelpers::extractEntity( entity );
-        d_moab_mesh->get_moab()->get_coords( &handle, 1, centroid.getRawPtr() );
+        d_moab_mesh->get_moab()->get_coords( &handle, 1, buffer );
     }
     // Element case.
     else
@@ -102,9 +107,12 @@ void MoabEntityLocalMap::centroid(
         Teuchos::Array<double> param_center;
         parametricCenter( entity, param_center );
 
-        DTK_CHECK_ERROR_CODE( d_moab_evaluator->eval( param_center.getRawPtr(),
-                                                      centroid.getRawPtr() ) );
+        DTK_CHECK_ERROR_CODE(
+            d_moab_evaluator->eval( param_center.getRawPtr(), buffer ) );
     }
+
+    for ( int i = 0; i < centroid.size(); ++i )
+        centroid[i] = buffer[i];
 }
 
 //---------------------------------------------------------------------------//
