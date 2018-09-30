@@ -119,10 +119,9 @@ inline double WendlandBasis<4>::evaluateValue( const double radius,
     double xval = x / radius;
     double onemx = 1.0 - xval;
     double onemx2 = onemx * onemx;
-    return ( xval < 1.0 )
-               ? onemx2 * onemx2 * onemx2 *
-                     ( 35.0 * xval * xval + 18.0 * xval + 3.0 )
-               : 0.0;
+    return ( xval < 1.0 ) ? onemx2 * onemx2 * onemx2 *
+                                ( 35.0 * xval * xval + 18.0 * xval + 3.0 )
+                          : 0.0;
 }
 
 //---------------------------------------------------------------------------//
@@ -178,11 +177,31 @@ inline double WendlandBasis<6>::evaluateGradient( const double radius,
     double xmone = xval - 1.0;
     double xmone2 = xmone * xmone;
     double xmone4 = xmone2 * xmone2;
-    return ( xval < 1.0 )
-               ? 22.0 * xval * xmone4 * xmone2 * xmone *
-                     ( 16.0 * xval * xval + 7.0 * xval + 1.0 )
-               : 0.0;
+    return ( xval < 1.0 ) ? 22.0 * xval * xmone4 * xmone2 * xmone *
+                                ( 16.0 * xval * xval + 7.0 * xval + 1.0 )
+                          : 0.0;
 }
+
+// added QC
+// specialization of order 1 dimension 2
+template <>
+inline double WendlandBasis<21>::evaluateValue( const double radius,
+                                                const double x ) const
+{
+    const double xval = x / radius;
+    const double onemx = 1.0 - xval;
+    return ( xval < 1.0 ) ? onemx * onemx * onemx * ( 3.0 * xval + 1.0 ) : 0.0;
+}
+
+template <>
+inline double WendlandBasis<21>::evaluateGradient( const double radius,
+                                                   const double x ) const
+{
+    const double xval = x / radius;
+    const double onemx = 1.0 - xval;
+    return ( xval < 1.0 ) ? 6.0 * onemx * onemx * ( xval + 1.0 ) : 0.0;
+}
+// added QC
 
 //---------------------------------------------------------------------------//
 

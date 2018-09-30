@@ -91,7 +91,8 @@ MapOperatorFactory::create( const Teuchos::RCP<const TpetraMap> &domain_map,
 
     // Spline Interpolation
     case POINT_CLOUD:
-        map = pcloud_factory.create( domain_map, range_map, map_list );
+        map = pcloud_factory.create( domain_map, range_map,
+                                     parameters.sublist( map_name ) );
         break;
 
     // Throw on default.

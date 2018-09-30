@@ -147,6 +147,11 @@ Teuchos::RCP<MapOperator> PointCloudOperatorFactory::create(
                         new SplineInterpolationOperator<WendlandBasis<6>, 1>(
                             domain_map, range_map, parameters ) );
                     break;
+                case 21:
+                    map = Teuchos::rcp(
+                        new SplineInterpolationOperator<WendlandBasis<21>, 1>(
+                            domain_map, range_map, parameters ) );
+                    break;
                 }
                 break;
             case WU:
@@ -203,6 +208,11 @@ Teuchos::RCP<MapOperator> PointCloudOperatorFactory::create(
                         new SplineInterpolationOperator<WendlandBasis<6>, 2>(
                             domain_map, range_map, parameters ) );
                     break;
+                case 21:
+                    map = Teuchos::rcp(
+                        new SplineInterpolationOperator<WendlandBasis<21>, 2>(
+                            domain_map, range_map, parameters ) );
+                    break;
                 }
                 break;
             case WU:
@@ -257,6 +267,11 @@ Teuchos::RCP<MapOperator> PointCloudOperatorFactory::create(
                 case 6:
                     map = Teuchos::rcp(
                         new SplineInterpolationOperator<WendlandBasis<6>, 3>(
+                            domain_map, range_map, parameters ) );
+                    break;
+                case 21:
+                    map = Teuchos::rcp(
+                        new SplineInterpolationOperator<WendlandBasis<21>, 3>(
                             domain_map, range_map, parameters ) );
                     break;
                 }
@@ -325,6 +340,12 @@ Teuchos::RCP<MapOperator> PointCloudOperatorFactory::create(
                             WendlandBasis<6>, 1>( domain_map, range_map,
                                                   parameters ) );
                     break;
+                case 21:
+                    map = Teuchos::rcp(
+                        new MovingLeastSquareReconstructionOperator<
+                            WendlandBasis<21>, 1>( domain_map, range_map,
+                                                  parameters ) );
+                    break;
                 }
                 break;
             case WU:
@@ -388,6 +409,12 @@ Teuchos::RCP<MapOperator> PointCloudOperatorFactory::create(
                             WendlandBasis<6>, 2>( domain_map, range_map,
                                                   parameters ) );
                     break;
+                case 21:
+                    map = Teuchos::rcp(
+                        new MovingLeastSquareReconstructionOperator<
+                            WendlandBasis<21>, 2>( domain_map, range_map,
+                                                  parameters ) );
+                    break;
                 }
                 break;
             case WU:
@@ -449,6 +476,12 @@ Teuchos::RCP<MapOperator> PointCloudOperatorFactory::create(
                     map = Teuchos::rcp(
                         new MovingLeastSquareReconstructionOperator<
                             WendlandBasis<6>, 3>( domain_map, range_map,
+                                                  parameters ) );
+                    break;
+                case 21:
+                    map = Teuchos::rcp(
+                        new MovingLeastSquareReconstructionOperator<
+                            WendlandBasis<21>, 3>( domain_map, range_map,
                                                   parameters ) );
                     break;
                 }

@@ -41,6 +41,7 @@
 #ifndef DTK_STATICSEARCHTREE_IMPL_HPP
 #define DTK_STATICSEARCHTREE_IMPL_HPP
 
+#include <iostream>
 #include <limits>
 
 #include "DTK_DBC.hpp"
@@ -182,12 +183,40 @@ Teuchos::Array<unsigned>
 NanoflannTree<DIM>::radiusSearch( const Teuchos::ArrayView<const double> &point,
                                   const double radius ) const
 {
+    // added, QC
+    // we ensure that we can have enough points, at least for interpolation
+    // recall that DTK2 uses quadratic polynomial basis thus having
+    // 3, 6, 10 coefficients for dimension 1, 2, and 3, resp.
+    const static int MIN_PTS[3] = {3, 6, 10};
+    const static int MIN_PT = MIN_PTS[DIM - 1];
+    const static int GUARD = 10;
+    // added, QC
+
     DTK_REQUIRE( DIM == point.size() );
     Teuchos::Array<std::pair<unsigned, double>> neighbor_pairs;
     nanoflann::SearchParams params;
-    double l2_radius = radius * radius;
-    d_tree->radiusSearch( point.getRawPtr(), l2_radius, neighbor_pairs,
-                          params );
+
+    // modified, QC
+    // adaptively enlarge the radius to ensure we have enough points
+    double r = radius;
+    for ( int i = 0; i < GUARD; ++i )
+    {
+        const double l2_radius = r * r;
+        if ( d_tree->radiusSearch( point.getRawPtr(), l2_radius, neighbor_pairs,
+                                   params ) >= MIN_PT )
+            break;
+        r *= 1.5;
+        // NOTE neighbor_paris is cleared everytime inside radiusSearch
+    }
+    // double l2_radius = radius * radius;
+    // d_tree->radiusSearch( point.getRawPtr(), l2_radius, neighbor_pairs,
+    //                       params );
+    if ( neighbor_pairs.size() < MIN_PT )
+        std::cerr << "\nWARNING: not enough points for dimension:" << DIM
+                  << " with points:" << neighbor_pairs.size() << ", "
+                  << __FILE__ << ':' << __LINE__ << '\n'
+                  << std::endl;
+    // modified, QC
 
     Teuchos::Array<std::pair<unsigned, double>>::const_iterator pair_it;
     Teuchos::Array<unsigned> neighbors( neighbor_pairs.size() );

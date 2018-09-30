@@ -63,10 +63,13 @@ class SplineInterpolationPairing
 {
   public:
     // Constructor.
+    // added the leaf parameter, QC
+    // added the use_new_search, QC
     SplineInterpolationPairing(
         const Teuchos::ArrayView<const double> &child_centers,
         const Teuchos::ArrayView<const double> &parent_centers,
-        const bool use_knn, const unsigned num_neighbors, const double radius );
+        const bool use_knn, const unsigned num_neighbors, const double radius,
+        const int leaf = 0, const bool use_new_search = false );
 
     // Given a parent center local id get the ids of the child centers within
     // the given radius.
@@ -82,6 +85,18 @@ class SplineInterpolationPairing
     // Get the support radius of a given parent.
     double parentSupportRadius( const unsigned parent_id ) const;
 
+    // added QC
+    inline void setRadius( const unsigned parent_id, double r )
+    {
+        d_radii[parent_id] = r;
+    }
+    inline void setSize( const unsigned parent_id, EntityId size )
+    {
+        d_pair_sizes[parent_id] = size;
+    }
+    inline const Teuchos::Array<double> &hs() const { return d_hs; }
+    // added QC
+
   private:
     // Pairings.
     Teuchos::Array<Teuchos::Array<unsigned>> d_pairings;
@@ -91,6 +106,10 @@ class SplineInterpolationPairing
 
     // Parent center support radius.
     Teuchos::Array<double> d_radii;
+
+    // Closest h
+    // added by QC
+    Teuchos::Array<double> d_hs;
 };
 
 //---------------------------------------------------------------------------//

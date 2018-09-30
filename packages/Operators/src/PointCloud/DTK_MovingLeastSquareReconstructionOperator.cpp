@@ -51,16 +51,19 @@ template class MovingLeastSquareReconstructionOperator<WendlandBasis<0>, 1>;
 template class MovingLeastSquareReconstructionOperator<WendlandBasis<2>, 1>;
 template class MovingLeastSquareReconstructionOperator<WendlandBasis<4>, 1>;
 template class MovingLeastSquareReconstructionOperator<WendlandBasis<6>, 1>;
+template class MovingLeastSquareReconstructionOperator<WendlandBasis<21>, 1>;
 
 template class MovingLeastSquareReconstructionOperator<WendlandBasis<0>, 2>;
 template class MovingLeastSquareReconstructionOperator<WendlandBasis<2>, 2>;
 template class MovingLeastSquareReconstructionOperator<WendlandBasis<4>, 2>;
 template class MovingLeastSquareReconstructionOperator<WendlandBasis<6>, 2>;
+template class MovingLeastSquareReconstructionOperator<WendlandBasis<21>, 2>;
 
 template class MovingLeastSquareReconstructionOperator<WendlandBasis<0>, 3>;
 template class MovingLeastSquareReconstructionOperator<WendlandBasis<2>, 3>;
 template class MovingLeastSquareReconstructionOperator<WendlandBasis<4>, 3>;
 template class MovingLeastSquareReconstructionOperator<WendlandBasis<6>, 3>;
+template class MovingLeastSquareReconstructionOperator<WendlandBasis<21>, 3>;
 
 template class MovingLeastSquareReconstructionOperator<WuBasis<2>, 1>;
 template class MovingLeastSquareReconstructionOperator<WuBasis<4>, 1>;

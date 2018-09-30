@@ -41,6 +41,15 @@
 #ifndef DTK_MOVINGLEASTSQUARERECONSTRUCTIONOPERATOR_HPP
 #define DTK_MOVINGLEASTSQUARERECONSTRUCTIONOPERATOR_HPP
 
+// added by QC
+// define a symbol that enable writing indicator values to files
+#define TUNING_INDICATOR_VALUES
+
+#ifdef TUNING_INDICATOR_VALUES
+#include <string>
+#endif
+// added QC
+
 #include "DTK_MapOperator.hpp"
 #include "DTK_RadialBasisPolicy.hpp"
 
@@ -49,10 +58,22 @@
 #include <Teuchos_Comm.hpp>
 #include <Teuchos_RCP.hpp>
 
+#include <Teuchos_SerialDenseMatrix.hpp> // added, QC
+
 #include <Tpetra_CrsMatrix.hpp>
 
 namespace DataTransferKit
 {
+
+// added, QC
+// forward pairing
+template <int DIM>
+class SplineInterpolationPairing;
+// forward distributor
+template <int DIM>
+class CenterDistributor;
+// added, QC
+
 //---------------------------------------------------------------------------//
 /*!
  * \class MovingLeastSquareReconstructionOperator
@@ -111,6 +132,8 @@ class MovingLeastSquareReconstructionOperator : virtual public MapOperator
     /*!
      * \brief Apply the operator.
      */
+    // NOTE we use mode == TRANS indicate doing post disc correction, QC
+    // NOTE we use alpha to pass in the smoothness indicator threshold sigma
     void applyImpl(
         const TpetraMultiVector &X, TpetraMultiVector &Y,
         Teuchos::ETransp mode = Teuchos::NO_TRANS,
@@ -121,6 +144,38 @@ class MovingLeastSquareReconstructionOperator : virtual public MapOperator
      * \brief Transpose apply option.
      */
     bool hasTransposeApplyImpl() const override;
+
+    // added QC for post-processing
+
+    /*!
+     * \brief send the source values to the target decomposition map
+     *
+     * \param[in] domainV domain values
+     * \param[out] domainDistV distributed domain/source values
+     *
+     */
+    void sendSource2TargetMap(
+        const TpetraMultiVector &domainV,
+        Teuchos::SerialDenseMatrix<LO, double> &domainDistV ) const;
+
+    /*!
+     * \brief detect and resolve discontinuous solutions
+     *
+     * \param[in] domainDistV the distributed source values
+     * \param[in,out] rangeIntrmV target intermediate solution after
+     * transferring
+     * \param[in] sigma threshold for smoothness indicator
+     * \return Number of disc points
+     *
+     * We first detect the disc regions with a smooth indicator, similar to
+     * those used in WENO schemes. Then a simple cropping strategy is used to
+     * ensure the values are bounded locally in the stencil.
+     */
+    LO detectResolveDisc(
+        const Teuchos::SerialDenseMatrix<LO, double> &domainDistV,
+        TpetraMultiVector &rangeIntrmV, const double sigma ) const;
+
+    // added QC
 
   private:
     // Extract node coordinates and ids from an iterator.
@@ -145,8 +200,48 @@ class MovingLeastSquareReconstructionOperator : virtual public MapOperator
     // Range entity topological dimension. Default is 0 (vertex).
     int d_range_entity_dim;
 
+    // leaf size for the kdtree
+    // added by QC
+    int d_leaf;
+
+    // use qrcp impl
+    // added by QC
+    bool d_use_qrcp;
+
+    // store the pairing
+    // added by QC
+    Teuchos::RCP<SplineInterpolationPairing<DIM>> d_pairings;
+
+    // store the distributor
+    // added by QC
+    Teuchos::RCP<CenterDistributor<DIM>> d_dist;
+
+    // flag for post-processing correction
+    // added by QC
+    bool d_do_post;
+
+    // local problem row scaling rho, i.e. rows=rho*num_col
+    // added by QC
+    double d_rho;
+
+    // save the point clouds of target and source for post-processing
+    // the source is distributed point cloud
+    // added by QC
+    // Teuchos::ArrayRCP<double> d_tar_pts;
+    // Teuchos::Array<double> d_src_pts;
+
+    // added a reference to the parameter
+    // added by QC
+    Teuchos::ParameterList &d_pars;
+
     // Coupling matrix.
     Teuchos::RCP<Tpetra::CrsMatrix<Scalar, LO, GO>> d_coupling_matrix;
+
+// added QC
+#ifdef TUNING_INDICATOR_VALUES
+    std::string d_file_name;
+#endif
+    // added QC
 };
 
 //---------------------------------------------------------------------------//

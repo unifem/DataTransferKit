@@ -41,6 +41,8 @@
 #ifndef DTK_SPLINEINTERPOLATIONPAIRING_IMPL_HPP
 #define DTK_SPLINEINTERPOLATIONPAIRING_IMPL_HPP
 
+#include <algorithm>
+
 #include "DTK_DBC.hpp"
 #include "DTK_EuclideanDistance.hpp"
 #include "DTK_SplineInterpolationPairing.hpp"
@@ -52,17 +54,23 @@ namespace DataTransferKit
 /*!
  * \brief Constructor.
  */
+// added the leaf parameter, QC
 template <int DIM>
 SplineInterpolationPairing<DIM>::SplineInterpolationPairing(
     const Teuchos::ArrayView<const double> &child_centers,
     const Teuchos::ArrayView<const double> &parent_centers, const bool use_knn,
-    const unsigned num_neighbors, const double radius )
+    const unsigned num_neighbors, const double radius, const int leaf,
+    const bool use_new_search )
 {
     DTK_REQUIRE( 0 == child_centers.size() % DIM );
     DTK_REQUIRE( 0 == parent_centers.size() % DIM );
 
     // Setup the kD-tree
     unsigned leaf_size = 30;
+    if ( leaf > 0 )
+    {
+        leaf_size = (unsigned)leaf;
+    }
     NanoflannTree<DIM> tree( child_centers, leaf_size );
 
     // Allocate arrays
@@ -70,39 +78,90 @@ SplineInterpolationPairing<DIM>::SplineInterpolationPairing(
     d_pairings.resize( num_parents );
     d_pair_sizes = Teuchos::ArrayRCP<EntityId>( num_parents );
     d_radii.resize( num_parents );
+    d_hs.resize( num_parents );
 
-    // Search for pairs
-    for ( unsigned i = 0; i < num_parents; ++i )
+    // added QC
+    // TODO this part should be moved in the kd-tree
+    // we first search for a small neighborhood by KNN, the following defines
+    // the table that estimate the one-ring neighbor
+    const static int SMALL_KNN[3] = {3, 6, 7};
+    const static int small_knn = SMALL_KNN[DIM - 1];
+    // then we use the maximal length to define radius that expand by 5 times
+    // to query the mesh
+    // NOTE that this still complete resolves issues with stretched grids...
+
+    if ( use_new_search )
     {
-        // If kNN do the nearest neighbor search for kNN and calculate a
-        // radius. The radius will be a small fraction larger than the
-        // farthest neighbor. An alternative to this would be to find the
-        // kNN+1 neighbors and use the last neighbor's distance as the
-        // radius.
-        if ( use_knn )
+        for ( unsigned i = 0; i < num_parents; ++i )
         {
-            // Get the knn neighbors
+            // Not efficient in terms of memory allocation, but we have
+            // no choice here
+            const Teuchos::Array<unsigned> small_nbr =
+                tree.nnSearch( parent_centers( DIM * i, DIM ), small_knn );
+            double h = 0.0;
+            for ( auto itr = small_nbr.begin(); itr != small_nbr.end(); ++itr )
+                h = std::max(
+                    h, EuclideanDistance<DIM>::distance(
+                           parent_centers( DIM * i, DIM ).getRawPtr(),
+                           child_centers( DIM * *itr, DIM ).getRawPtr() ) );
+            d_radii[i] = 5.1 * h; // expand 5times+10%, might be too large!
             d_pairings[i] =
-                tree.nnSearch( parent_centers( DIM * i, DIM ), num_neighbors );
+                tree.radiusSearch( parent_centers( DIM * i, DIM ), d_radii[i] );
 
-            // Get the radius from kNN. Make it slightly larger so the last
-            // neighbor gives a non-zero contribution to the interpolant.
-            d_radii[i] = EuclideanDistance<DIM>::distance(
+            // Get the size of the support.
+            d_pair_sizes[i] = d_pairings[i].size();
+
+            // added,QC
+            // computing the closest h
+            d_hs[i] = EuclideanDistance<DIM>::distance(
                 parent_centers( DIM * i, DIM ).getRawPtr(),
-                child_centers( DIM * d_pairings[i].back(), DIM ).getRawPtr() );
-            d_radii[i] *= 1.01;
+                child_centers( DIM * d_pairings[i].front(), DIM ).getRawPtr() );
         }
-
-        // Otherwise do the radius search.
-        else
+    }
+    // added QC
+    else
+    {
+        // Search for pairs
+        for ( unsigned i = 0; i < num_parents; ++i )
         {
-            d_pairings[i] =
-                tree.radiusSearch( parent_centers( DIM * i, DIM ), radius );
-            d_radii[i] = radius;
-        }
 
-        // Get the size of the support.
-        d_pair_sizes[i] = d_pairings[i].size();
+            // If kNN do the nearest neighbor search for kNN and calculate a
+            // radius. The radius will be a small fraction larger than the
+            // farthest neighbor. An alternative to this would be to find the
+            // kNN+1 neighbors and use the last neighbor's distance as the
+            // radius.
+            if ( use_knn )
+            {
+                // Get the knn neighbors
+                d_pairings[i] = tree.nnSearch( parent_centers( DIM * i, DIM ),
+                                               num_neighbors );
+
+                // Get the radius from kNN. Make it slightly larger so the last
+                // neighbor gives a non-zero contribution to the interpolant.
+                d_radii[i] = EuclideanDistance<DIM>::distance(
+                    parent_centers( DIM * i, DIM ).getRawPtr(),
+                    child_centers( DIM * d_pairings[i].back(), DIM )
+                        .getRawPtr() );
+                d_radii[i] *= 1.01;
+            }
+
+            // Otherwise do the radius search.
+            else
+            {
+                d_pairings[i] =
+                    tree.radiusSearch( parent_centers( DIM * i, DIM ), radius );
+                d_radii[i] = radius;
+            }
+
+            // Get the size of the support.
+            d_pair_sizes[i] = d_pairings[i].size();
+
+            // added,QC
+            // computing the closest h
+            d_hs[i] = EuclideanDistance<DIM>::distance(
+                parent_centers( DIM * i, DIM ).getRawPtr(),
+                child_centers( DIM * d_pairings[i].front(), DIM ).getRawPtr() );
+        }
     }
 }
 

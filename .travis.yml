@@ -1,0 +1,19 @@
+os: linux
+dist: trusty
+language: python
+services: docker
+
+branches:
+  only:
+  - dev-qc
+
+env:
+  global:
+    - BASE=unifem/cht-coupler:meshdb-bin
+
+before_script:
+  - docker --version
+  - docker pull $BASE
+
+script:
+  - docker build --file docker/Dockerfile .
